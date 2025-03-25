@@ -149,3 +149,14 @@ docker-compose run anilist-data-collector
 ```
 
 This will fetch the latest data from AniList and upload it to Kaggle, creating a new version of the dataset.
+
+## Docker Image Size Optimization
+
+The Docker image has been optimized to minimize size while maintaining full functionality:
+
+1. Uses multi-stage builds to separate build and runtime environments
+2. Installs only essential build dependencies
+3. Uses Python virtual environment to manage dependencies
+4. Removes unnecessary build artifacts and cache files
+
+These optimizations significantly reduce the Docker image size compared to the previous version.

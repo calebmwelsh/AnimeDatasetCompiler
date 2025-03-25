@@ -10,13 +10,26 @@ filtering to retrieve all anime in batches, with proper FuzzyDateInt handling.
 
 import argparse
 import json
+import logging
 import os
+import sys
 import time
 from datetime import datetime
+from pathlib import Path
 
 import pandas as pd
 import requests
 from tqdm import tqdm
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.stdout)
+    ]
+)
+logger = logging.getLogger('fetch_data')
 
 # AniList GraphQL API endpoint
 ANILIST_API = "https://graphql.anilist.co"
@@ -337,22 +350,26 @@ def fetch_anime_page(page, per_page=50, start_year=None, end_year=None):
         'Accept': 'application/json',
     }
     
-    response = requests.post(ANILIST_API, json=payload, headers=headers)
-    
-    # Handle rate limiting
-    if response.status_code == 429:
-        retry_after = int(response.headers.get('Retry-After', 60))
-        print(f"\nRate limited. Waiting for {retry_after} seconds...")
-        time.sleep(retry_after)
-        return fetch_anime_page(page, per_page, start_year, end_year)
-    
-    # Handle other errors
-    if response.status_code != 200:
-        print(f"Error: {response.status_code}")
-        print(response.text)
+    try:
+        response = requests.post(ANILIST_API, json=payload, headers=headers)
+        
+        # Handle rate limiting
+        if response.status_code == 429:
+            retry_after = int(response.headers.get('Retry-After', 60))
+            logger.warning(f"Rate limited. Waiting for {retry_after} seconds...")
+            time.sleep(retry_after)
+            return fetch_anime_page(page, per_page, start_year, end_year)
+        
+        # Handle other errors
+        if response.status_code != 200:
+            logger.error(f"Error: {response.status_code}")
+            logger.error(response.text)
+            return None
+        
+        return response.json()
+    except Exception as e:
+        logger.error(f"Error fetching anime page: {str(e)}")
         return None
-    
-    return response.json()
 
 def flatten_anime_data(anime):
     """
@@ -399,23 +416,23 @@ def flatten_anime_data(anime):
     flattened['seasonYear'] = anime.get('seasonYear')
     flattened['seasonInt'] = anime.get('seasonInt')
     
-    # Episodes and duration
+    # Episode info
     flattened['episodes'] = anime.get('episodes')
     flattened['duration'] = anime.get('duration')
     flattened['chapters'] = anime.get('chapters')
     flattened['volumes'] = anime.get('volumes')
     
-    # Origin and licensing
+    # Origin and source
     flattened['countryOfOrigin'] = anime.get('countryOfOrigin')
     flattened['isLicensed'] = anime.get('isLicensed')
     flattened['source'] = anime.get('source')
     flattened['hashtag'] = anime.get('hashtag')
     
-    # Trailer
-    trailer = anime.get('trailer', {})
-    flattened['trailer_id'] = trailer.get('id') if trailer else None
-    flattened['trailer_site'] = trailer.get('site') if trailer else None
-    flattened['trailer_thumbnail'] = trailer.get('thumbnail') if trailer else None
+    # Trailer - Fix for NoneType error
+    trailer = anime.get('trailer') or {}  # Use empty dict if trailer is None
+    flattened['trailer_id'] = trailer.get('id')
+    flattened['trailer_site'] = trailer.get('site')
+    flattened['trailer_thumbnail'] = trailer.get('thumbnail')
     
     # Updated timestamp
     flattened['updatedAt'] = anime.get('updatedAt')
@@ -428,24 +445,15 @@ def flatten_anime_data(anime):
     flattened['coverImage_color'] = cover_image.get('color')
     flattened['bannerImage'] = anime.get('bannerImage')
     
-    # Tags and Genres
+    # Tags and genres
     flattened['genres'] = json.dumps(anime.get('genres', []))
     flattened['synonyms'] = json.dumps(anime.get('synonyms', []))
     
-    # Convert tags to JSON string
+    # Convert tags to JSON
     tags = anime.get('tags', [])
-    flattened['tags'] = json.dumps([{
-        'id': tag.get('id'),
-        'name': tag.get('name'),
-        'description': tag.get('description'),
-        'category': tag.get('category'),
-        'rank': tag.get('rank'),
-        'isGeneralSpoiler': tag.get('isGeneralSpoiler'),
-        'isMediaSpoiler': tag.get('isMediaSpoiler'),
-        'isAdult': tag.get('isAdult')
-    } for tag in tags])
+    flattened['tags'] = json.dumps(tags)
     
-    # Stats and Scores
+    # Stats and scores
     flattened['averageScore'] = anime.get('averageScore')
     flattened['meanScore'] = anime.get('meanScore')
     flattened['popularity'] = anime.get('popularity')
@@ -454,247 +462,152 @@ def flatten_anime_data(anime):
     
     # Rankings
     rankings = anime.get('rankings', [])
-    flattened['rankings'] = json.dumps([{
-        'id': rank.get('id'),
-        'rank': rank.get('rank'),
-        'type': rank.get('type'),
-        'format': rank.get('format'),
-        'year': rank.get('year'),
-        'season': rank.get('season'),
-        'allTime': rank.get('allTime'),
-        'context': rank.get('context')
-    } for rank in rankings])
+    flattened['rankings'] = json.dumps(rankings)
     
-    # Status Flags
+    # Status flags
     flattened['isFavourite'] = anime.get('isFavourite')
     flattened['isAdult'] = anime.get('isAdult')
     flattened['isLocked'] = anime.get('isLocked')
     
-    # External Info
+    # External info
     flattened['siteUrl'] = anime.get('siteUrl')
     
-    # External Links
+    # External links
     external_links = anime.get('externalLinks', [])
-    flattened['externalLinks'] = json.dumps([{
-        'id': link.get('id'),
-        'url': link.get('url'),
-        'site': link.get('site'),
-        'type': link.get('type'),
-        'language': link.get('language'),
-        'color': link.get('color'),
-        'icon': link.get('icon'),
-        'notes': link.get('notes'),
-        'isDisabled': link.get('isDisabled')
-    } for link in external_links])
+    flattened['externalLinks'] = json.dumps(external_links)
     
-    # Streaming Episodes
+    # Streaming episodes
     streaming_episodes = anime.get('streamingEpisodes', [])
-    flattened['streamingEpisodes'] = json.dumps([{
-        'title': ep.get('title'),
-        'thumbnail': ep.get('thumbnail'),
-        'url': ep.get('url'),
-        'site': ep.get('site')
-    } for ep in streaming_episodes])
+    flattened['streamingEpisodes'] = json.dumps(streaming_episodes)
     
-    # Related Media
+    # Relations
     relations = anime.get('relations', {}).get('edges', [])
-    flattened['relations'] = json.dumps([{
-        'id': rel.get('id'),
-        'relationType': rel.get('relationType'),
-        'node': {
-            'id': rel.get('node', {}).get('id'),
-            'title': rel.get('node', {}).get('title'),
-            'type': rel.get('node', {}).get('type'),
-            'format': rel.get('node', {}).get('format'),
-            'status': rel.get('node', {}).get('status')
-        }
-    } for rel in relations])
+    flattened['relations'] = json.dumps(relations)
     
     # Characters
     characters = anime.get('characters', {}).get('edges', [])
-    flattened['characters'] = json.dumps([{
-        'id': char.get('id'),
-        'role': char.get('role'),
-        'name': char.get('name'),
-        'voiceActors': char.get('voiceActors'),
-        'node': {
-            'id': char.get('node', {}).get('id'),
-            'name': char.get('node', {}).get('name'),
-            'image': char.get('node', {}).get('image'),
-            'description': char.get('node', {}).get('description')
-        }
-    } for char in characters])
+    flattened['characters'] = json.dumps(characters)
     
     # Staff
     staff = anime.get('staff', {}).get('edges', [])
-    flattened['staff'] = json.dumps([{
-        'id': s.get('id'),
-        'role': s.get('role'),
-        'node': {
-            'id': s.get('node', {}).get('id'),
-            'name': s.get('node', {}).get('name'),
-            'languageV2': s.get('node', {}).get('languageV2'),
-            'image': s.get('node', {}).get('image')
-        }
-    } for s in staff])
+    flattened['staff'] = json.dumps(staff)
     
     # Studios
     studios = anime.get('studios', {}).get('edges', [])
-    flattened['studios'] = json.dumps([{
-        'id': studio.get('id'),
-        'isMain': studio.get('isMain'),
-        'node': {
-            'id': studio.get('node', {}).get('id'),
-            'name': studio.get('node', {}).get('name'),
-            'isAnimationStudio': studio.get('node', {}).get('isAnimationStudio')
-        }
-    } for studio in studios])
+    flattened['studios'] = json.dumps(studios)
     
-    # Airing Info
-    next_airing = anime.get('nextAiringEpisode', {})
-    flattened['nextAiringEpisode'] = json.dumps(next_airing) if next_airing else None
+    # Airing info
+    next_airing_episode = anime.get('nextAiringEpisode', {})
+    flattened['nextAiringEpisode'] = json.dumps(next_airing_episode) if next_airing_episode else None
     
     airing_schedule = anime.get('airingSchedule', {}).get('nodes', [])
     flattened['airingSchedule'] = json.dumps(airing_schedule)
     
     # Recommendations
     recommendations = anime.get('recommendations', {}).get('edges', [])
-    flattened['recommendations'] = json.dumps([{
-        'node': {
-            'id': rec.get('node', {}).get('id'),
-            'rating': rec.get('node', {}).get('rating'),
-            'mediaRecommendation': rec.get('node', {}).get('mediaRecommendation')
-        }
-    } for rec in recommendations])
+    flattened['recommendations'] = json.dumps(recommendations)
     
     # Reviews
     reviews = anime.get('reviews', {}).get('edges', [])
-    flattened['reviews'] = json.dumps([{
-        'node': {
-            'id': rev.get('node', {}).get('id'),
-            'summary': rev.get('node', {}).get('summary'),
-            'rating': rev.get('node', {}).get('rating'),
-            'score': rev.get('node', {}).get('score')
-        }
-    } for rev in reviews])
+    flattened['reviews'] = json.dumps(reviews)
     
     # Stats
     stats = anime.get('stats', {})
-    flattened['stats_scoreDistribution'] = json.dumps(stats.get('scoreDistribution', []))
-    flattened['stats_statusDistribution'] = json.dumps(stats.get('statusDistribution', []))
+    score_distribution = stats.get('scoreDistribution', [])
+    status_distribution = stats.get('statusDistribution', [])
+    flattened['stats_scoreDistribution'] = json.dumps(score_distribution)
+    flattened['stats_statusDistribution'] = json.dumps(status_distribution)
     
     return flattened
 
-def fetch_anime_by_year_range(start_year, end_year, test_mode=False):
-    """
-    Fetch anime data for a specific year range
-    
-    Args:
-        start_year (int): Start year for filtering (inclusive)
-        end_year (int): End year for filtering (inclusive)
-        test_mode (bool): If True, only fetch a small sample of anime for testing
-        
-    Returns:
-        list: List of flattened anime data dictionaries
-    """
-    all_anime = []
-    page = 1
-    per_page = 50  # Maximum allowed by AniList API
-    
-    # Get total count from first page
-    first_page = fetch_anime_page(page, per_page, start_year, end_year)
-    if not first_page or 'data' not in first_page:
-        print(f"Failed to fetch first page for years {start_year}-{end_year}")
-        return []
-    
-    total_pages = first_page['data']['Page']['pageInfo']['lastPage']
-    total_anime = first_page['data']['Page']['pageInfo']['total']
-    
-    print(f"Found {total_anime} anime from {start_year} to {end_year} across {total_pages} pages")
-    
-    # Limit pages in test mode
-    if test_mode:
-        total_pages = min(2, total_pages)
-        print(f"Test mode: Limiting to {total_pages} pages")
-    
-    # Process first page
-    anime_list = first_page['data']['Page']['media']
-    for anime in anime_list:
-        all_anime.append(flatten_anime_data(anime))
-    
-    # Process remaining pages
-    for page in tqdm(range(2, total_pages + 1), desc=f"Fetching anime ({start_year}-{end_year})"):
-        response = fetch_anime_page(page, per_page, start_year, end_year)
-        
-        if not response or 'data' not in response:
-            print(f"Failed to fetch page {page} for years {start_year}-{end_year}")
-            continue
-        
-        anime_list = response['data']['Page']['media']
-        for anime in anime_list:
-            all_anime.append(flatten_anime_data(anime))
-        
-        # Respect rate limits - sleep between requests
-        time.sleep(1)
-    
-    return all_anime
-
 def fetch_all_anime(test_mode=False):
     """
-    Fetch all anime data from AniList API using year-based filtering
+    Fetch all anime from AniList API using year-based filtering to overcome the 5,000 item limitation
     
     Args:
-        test_mode (bool): If True, only fetch a small sample of anime for testing
+        test_mode (bool): Whether to run in test mode (limited data)
         
     Returns:
         pandas.DataFrame: DataFrame containing all anime data
     """
+    # Define year ranges to fetch anime in batches
+    # This helps overcome the 5,000 item limitation of the AniList API
+    if test_mode:
+        # In test mode, just fetch a small sample
+        year_ranges = [(2020, 2020)]
+        logger.info("Running in TEST MODE - only fetching anime from 2020")
+    else:
+        # Define year ranges to fetch anime in batches
+        # Adjust these ranges based on the number of anime in each period
+        # Earlier years can have wider ranges as there are fewer anime
+        year_ranges = [
+            (1940, 1965),  # Very early anime (few entries)
+            (1966, 1970), (1971, 1975), (1976, 1980),  # Older anime
+            (1981, 1985), (1986, 1990), (1991, 1995), (1996, 2000),  # Classic anime
+            (2001, 2005), (2006, 2007), (2008, 2009),  # More anime per year
+            (2010, 2011), (2012, 2013), (2014, 2015),  # Modern anime (many entries)
+            (2016, 2016), (2017, 2017), (2018, 2018),  # Recent anime (many entries per year)
+            (2019, 2019), (2020, 2020), (2021, 2021),  # Very recent anime
+            (2022, 2022), (2023, 2023), (2024, 2024),  # Current anime
+            (2025, 2025)  # Upcoming anime
+        ]
+    
     all_anime = []
     
-    # Define year ranges to fetch
-    # Anime history spans from ~1940s to present
-    current_year = datetime.now().year
-    
-    # Create year ranges with smaller intervals for recent years (more anime)
-    # and larger intervals for older years (fewer anime)
-    year_ranges = []
-    
-    # Recent years (individual years)
-    for year in range(current_year, current_year - 10, -1):
-        year_ranges.append((year, year))
-    
-    # 2-year ranges for the decade before that
-    for year in range(current_year - 10, current_year - 20, -2):
-        year_ranges.append((year - 1, year))
-    
-    # 5-year ranges for earlier decades
-    for year in range(current_year - 20, 1940, -5):
-        year_ranges.append((year - 4, year))
-    
-    # Add the earliest range
-    year_ranges.append((1900, current_year - 25))
-    
-    # Limit year ranges in test mode
-    if test_mode:
-        year_ranges = year_ranges[:3]  # Just use the 3 most recent ranges
-        print(f"Test mode: Limiting to {len(year_ranges)} year ranges")
-    
-    # Create a directory for temporary files
-    temp_dir = "temp_anime_data"
-    os.makedirs(temp_dir, exist_ok=True)
+    # Create temp directory for batch files
+    temp_dir = Path("temp_anime_data")
+    temp_dir.mkdir(exist_ok=True)
     
     # Fetch anime for each year range
-    for i, (start_year, end_year) in enumerate(year_ranges):
-        print(f"Processing year range {i+1}/{len(year_ranges)}: {start_year}-{end_year}")
+    for start_year, end_year in year_ranges:
+        logger.info(f"Fetching anime from {start_year} to {end_year}...")
         
-        anime_batch = fetch_anime_by_year_range(start_year, end_year, test_mode)
+        anime_batch = []
+        page = 1
+        has_next_page = True
+        
+        # Fetch all pages for this year range
+        with tqdm(desc=f"{start_year}-{end_year}", unit="page") as pbar:
+            while has_next_page:
+                # Fetch a page of anime
+                response = fetch_anime_page(page, per_page=50, start_year=start_year, end_year=end_year)
+                
+                if not response or 'data' not in response:
+                    logger.error(f"Failed to fetch page {page} for years {start_year}-{end_year}")
+                    break
+                
+                # Extract anime data from response
+                page_info = response['data']['Page']['pageInfo']
+                media_list = response['data']['Page']['media']
+                
+                # Process each anime in this page
+                for anime in media_list:
+                    # Flatten nested data for easier DataFrame creation
+                    flattened_anime = flatten_anime_data(anime)
+                    anime_batch.append(flattened_anime)
+                
+                # Update progress
+                pbar.update(1)
+                pbar.set_postfix({"anime": len(anime_batch), "page": page})
+                
+                # Check if there are more pages
+                has_next_page = page_info['hasNextPage']
+                page += 1
+                
+                # In test mode, only fetch a few pages
+                if test_mode and page > 2:
+                    logger.info("Test mode: stopping after 2 pages")
+                    break
+                
+                # Add a small delay to avoid rate limiting
+                time.sleep(0.5)
         
         if anime_batch:
             # Save this batch to a temporary file
             batch_df = pd.DataFrame(anime_batch)
             temp_file = os.path.join(temp_dir, f"anime_{start_year}_{end_year}.pkl")
             batch_df.to_pickle(temp_file)
-            print(f"Saved {len(anime_batch)} anime to {temp_file}")
+            logger.info(f"Saved {len(anime_batch)} anime to {temp_file}")
             
             all_anime.extend(anime_batch)
     
@@ -704,7 +617,7 @@ def fetch_all_anime(test_mode=False):
     # Remove duplicates based on id
     if not df.empty:
         df = df.drop_duplicates(subset=['id'])
-        print(f"After removing duplicates: {len(df)} unique anime entries")
+        logger.info(f"After removing duplicates: {len(df)} unique anime entries")
     
     return df
 
@@ -715,42 +628,43 @@ def main():
     parser.add_argument('--test', action='store_true', help='Run in test mode (fetch only a few pages)')
     args = parser.parse_args()
     
-    print("Starting AniList anime data scraper...")
+    logger.info("Starting AniList anime data scraper...")
     
     # Fetch all anime data
     df = fetch_all_anime(test_mode=args.test)
     
     if df.empty:
-        print("Failed to fetch anime data")
+        logger.error("Failed to fetch anime data")
         return
       
     # Create data dir
-    directory_path = os.path.join("data", "raw")
-    if not os.path.exists(directory_path):
-        os.makedirs(directory_path)
-        print(f"Created directory: {directory_path}")
+    data_dir = Path("data")
+    raw_dir = data_dir / "raw"
+    if not raw_dir.exists():
+        raw_dir.mkdir(parents=True, exist_ok=True)
+        logger.info(f"Created directory: {raw_dir}")
     else:
-        print(f"Directory already exists: {directory_path}")
-        
+        logger.info(f"Directory already exists: {raw_dir}")
         
     # Save to CSV
-    csv_filename = "data/raw/anilist_anime_data_complete.csv"
+    csv_filename = raw_dir / "anilist_anime_data_complete.csv"
     df.to_csv(csv_filename, index=True)
-    print(f"Saved {len(df)} anime records to {csv_filename}")
+    logger.info(f"Saved {len(df)} anime records to {csv_filename}")
     
     # Save to Excel (optional)
     try:
-        excel_filename = "data/raw/anilist_anime_data_complete.xlsx"
+        excel_filename = raw_dir / "anilist_anime_data_complete.xlsx"
         df.to_excel(excel_filename, index=True)
-        print(f"Saved {len(df)} anime records to {excel_filename}")
+        logger.info(f"Saved {len(df)} anime records to {excel_filename}")
     except Exception as e:
-        print(f"Warning: Could not save to Excel format: {e}")
+        logger.error(f"Warning: Could not save to Excel format: {e}")
     
     # Save to pickle for easier reloading (optional)
-    pickle_filename = "data/raw/anilist_anime_data_complete.pkl"
+    pickle_filename = raw_dir / "anilist_anime_data_complete.pkl"
     df.to_pickle(pickle_filename)
-    print(f"Saved {len(df)} anime records to {pickle_filename}")
+    logger.info(f"Saved {len(df)} anime records to {pickle_filename}")
     
-    print("Done!")
+    logger.info("Done!")
 
-main()
+if __name__ == "__main__":
+    main()

@@ -10,6 +10,8 @@ This project fetches comprehensive anime data from AniList using their GraphQL A
 - `data/kaggle/kaggle_dataset_metadata.json`: Metadata for the Kaggle dataset
 - `data/kaggle/kaggle_dataset_description.md`: Detailed description of the dataset
 
+For a detailed overview of the directory structure, see [DIRECTORY_STRUCTURE.md](DIRECTORY_STRUCTURE.md).
+
 ## Features
 
 - Fetches all anime data from AniList using their GraphQL API
@@ -32,7 +34,7 @@ This project fetches comprehensive anime data from AniList using their GraphQL A
 
 ## Docker Support
 
-This project now includes Docker support for easier deployment and execution. See the [Docker README](DOCKER_README.md) for detailed instructions on:
+This project includes Docker support for easier deployment and execution. See the [Docker README](docker/docker-readme.md) for detailed instructions on:
 
 - Building and running the container
 - Setting up Kaggle API credentials
@@ -48,7 +50,7 @@ The Docker configuration automatically installs all required dependencies, so yo
 
 1. Clone this repository
 2. Set up Kaggle API credentials (see below)
-3. Install required dependencies: `pip install pandas requests tqdm openpyxl kaggle`
+3. Install required dependencies: `pip install -r requirements.txt`
 4. Run the main script:
 
 ```bash
@@ -92,20 +94,20 @@ Before running the script, you need to set up your Kaggle API credentials:
 
 After running the script, the following files will be created:
 
-- `anilist_anime_data_complete.csv`: Complete anime dataset in CSV format
-- `anilist_anime_data_complete.xlsx`: Complete anime dataset in Excel format
-- `anilist_anime_data_complete.pkl`: Complete anime dataset in Python pickle format
+- `data/raw/anilist_anime_data_complete.csv`: Complete anime dataset in CSV format
+- `data/raw/anilist_anime_data_complete.xlsx`: Complete anime dataset in Excel format
+- `data/raw/anilist_anime_data_complete.pkl`: Complete anime dataset in Python pickle format
 
 These files will also be uploaded to Kaggle as a dataset.
 
 ## Scheduling
 
-For automated data collection, you can now use Docker with your system's scheduler:
+For automated data collection, you can use Docker with your system's scheduler:
 
 - **Linux/Mac**: Use cron to schedule the Docker container to run weekly
 - **Windows**: Use Task Scheduler to run the Docker container weekly
 
-See the [Docker README](DOCKER_README.md) for detailed scheduling instructions.
+See the [Docker README](docker/docker-readme.md) for detailed scheduling instructions.
 
 ## License
 

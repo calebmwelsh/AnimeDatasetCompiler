@@ -7,10 +7,21 @@ It requires a valid Kaggle API token to be configured.
 
 import argparse
 import json
+import logging
 import os
 import shutil
 import sys
 from pathlib import Path
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.stdout)
+    ]
+)
+logger = logging.getLogger('upload_data')
 
 # Now import kaggle after credentials are set up
 from kaggle.api.kaggle_api_extended import KaggleApi
@@ -40,27 +51,27 @@ def setup_kaggle_credentials(kaggle_json_path=None):
     
     # Check if credentials already exist in the standard location
     if os.path.exists(standard_kaggle_json):
-        print(f"Using existing Kaggle credentials at {standard_kaggle_json}")
+        logger.info(f"Using existing Kaggle credentials at {standard_kaggle_json}")
         return True
     
     # If a specific path was provided, use that
     if kaggle_json_path:
         if not os.path.exists(kaggle_json_path):
-            print(f"Error: Kaggle credentials not found at {kaggle_json_path}")
+            logger.error(f"Error: Kaggle credentials not found at {kaggle_json_path}")
             return False
             
         source_path = kaggle_json_path
-        print(f"Using Kaggle credentials from: {kaggle_json_path}")
+        logger.info(f"Using Kaggle credentials from: {kaggle_json_path}")
     else:
-        print("Error: Kaggle credentials not found.")
-        print("Please provide a kaggle.json file with the correct credentials.")
+        logger.error("Error: Kaggle credentials not found.")
+        logger.error("Please provide a kaggle.json file with the correct credentials.")
         return False
     
     # Create the standard directory if it doesn't exist
     os.makedirs(standard_kaggle_dir, exist_ok=True)
     
     # Copy the credentials file to the standard location
-    print(f"Copying Kaggle credentials from {source_path} to {standard_kaggle_json}")
+    logger.info(f"Copying Kaggle credentials from {source_path} to {standard_kaggle_json}")
     shutil.copy(source_path, standard_kaggle_json)
     
     # Set permissions to 600 (required by Kaggle API) - skip on Windows
@@ -86,9 +97,9 @@ def validate_files(files):
             missing_files.append(file_path)
     
     if missing_files:
-        print("Error: The following required files are missing:")
+        logger.error("Error: The following required files are missing:")
         for file in missing_files:
-            print(f"  - {file}")
+            logger.error(f"  - {file}")
         return False
     
     return True
@@ -99,6 +110,7 @@ def upload_dataset(metadata_path, description_path, dataset_dir):
     
     Args:
         metadata_path (str): Path to dataset-metadata.json file
+        description_path (str): Path to dataset description markdown file
         dataset_dir (str): Directory containing the dataset files
     
     Returns:
@@ -115,7 +127,7 @@ def upload_dataset(metadata_path, description_path, dataset_dir):
         
         dataset_id = metadata.get('id')
         if not dataset_id:
-            print("Error: Dataset ID not found in metadata file")
+            logger.error("Error: Dataset ID not found in metadata file")
             return False
         
     
@@ -123,7 +135,9 @@ def upload_dataset(metadata_path, description_path, dataset_dir):
         try:
             existing_dataset = api.dataset_list_files(dataset_id)
             dataset_exists = True
-        except:
+            logger.info(f"Found existing dataset: {dataset_id}")
+        except Exception as e:
+            logger.info(f"Dataset does not exist or error checking: {str(e)}")
             dataset_exists = False
         
         # Create dataset folder structure
@@ -141,17 +155,17 @@ def upload_dataset(metadata_path, description_path, dataset_dir):
             json.dump(metadata, meta_file, indent=2)
 
         if dataset_exists:
-            print(f"Creating new version of existing dataset {dataset_id}")
+            logger.info(f"Creating new version of existing dataset {dataset_id}")
             api.dataset_create_version(dataset_dir, version_notes="Updated dataset", quiet=False)
         else:
-            print(f"Creating new dataset {dataset_id}")
+            logger.info(f"Creating new dataset {dataset_id}")
             api.dataset_create_new(dataset_dir, quiet=False)
         
-        print(f"Dataset successfully uploaded to Kaggle: https://www.kaggle.com/datasets/{dataset_id}")
+        logger.info(f"Dataset successfully uploaded to Kaggle: https://www.kaggle.com/datasets/{dataset_id}")
         return True
     
     except Exception as e:
-        print(f"Error uploading dataset to Kaggle: {str(e)}")
+        logger.error(f"Error uploading dataset to Kaggle: {str(e)}")
         return False
 
 def main():
@@ -193,16 +207,23 @@ def main():
     os.makedirs(dataset_dir, exist_ok=True)
     
     # Copy all files to the dataset directory
-    shutil.copy(args.csv, os.path.join(dataset_dir, os.path.basename(args.csv)))
-    shutil.copy(args.excel, os.path.join(dataset_dir, os.path.basename(args.excel)))
-    shutil.copy(args.pickle, os.path.join(dataset_dir, os.path.basename(args.pickle)))
-    shutil.copy(args.fetch_data, os.path.join(dataset_dir, os.path.basename(args.fetch_data)))
+    for src_file, file_type in [
+        (args.csv, "CSV"),
+        (args.excel, "Excel"),
+        (args.pickle, "Pickle"),
+        (args.fetch_data, "Python script")
+    ]:
+        dest_file = os.path.join(dataset_dir, os.path.basename(src_file))
+        logger.info(f"Copying {file_type} file to {dest_file}")
+        shutil.copy(src_file, dest_file)
     
     # Copy the description file with the correct name for Kaggle
     description_dest = os.path.join(dataset_dir, 'kaggle_dataset_description.md')
+    logger.info(f"Copying description file to {description_dest}")
     shutil.copy(args.description, description_dest)
     
     # Upload the dataset
+    logger.info("Starting dataset upload to Kaggle...")
     success = upload_dataset(args.metadata, args.description, dataset_dir)
     
     return 0 if success else 1
