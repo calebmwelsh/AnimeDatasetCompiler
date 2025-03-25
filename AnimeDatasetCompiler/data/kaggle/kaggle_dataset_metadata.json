@@ -1,0 +1,39 @@
+{
+  "title": "AniList Anime Dataset - Complete Collection",
+  "subtitle": "Comprehensive dataset of all anime from AniList with detailed attributes",
+  "description": "",
+  "id": "calebmwelsh/anilist-anime-dataset",
+  "licenses": [
+    {
+      "name": "CC0-1.0"
+    }
+  ],
+  "keywords": [
+    "anime",
+    "entertainment",
+    "media",
+    "japanese animation",
+    "anilist",
+    "recommendation systems",
+    "data analysis"
+  ],
+  "resources": [
+    {
+      "path": "anilist_anime_data_complete.csv",
+      "description": "Complete anime dataset in CSV format"
+    },
+    {
+      "path": "anilist_anime_data_complete.xlsx",
+      "description": "Complete anime dataset in Excel format"
+    },
+    {
+      "path": "anilist_anime_data_complete.pkl",
+      "description": "Complete anime dataset in Python pickle format"
+    },
+    {
+      "path": "kaggle_dataset_description.md",
+      "description": "Detailed description of dataset columns and structure"
+    }
+  ]
+}
+
