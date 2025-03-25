@@ -57,22 +57,14 @@ def fetch_anilist_data(test_mode=False):
     
     return run_command(command, "Fetching anime data from AniList")
 
-def upload_to_kaggle(kaggle_json=None):
+def upload_to_kaggle():
     """
     Upload dataset to Kaggle
     
-    Args:
-        kaggle_json (str): Path to kaggle.json credentials file
-        new_version (bool): Whether to create a new version of an existing dataset
-        
     Returns:
         bool: True if upload succeeded, False otherwise
     """
-    command = ["python3", "upload.py"]
-    
-    if kaggle_json:
-        command.extend(["--kaggle-json", kaggle_json])
-    
+    command = ["python3", "upload_data.py"]
     return run_command(command, "Uploading dataset to Kaggle")
 
 def main():
@@ -84,12 +76,6 @@ def main():
     parser.add_argument('--test', action='store_true',
                         help='Run data fetching in test mode (limited data)')
     
-    # Kaggle upload options
-    parser.add_argument('--kaggle-json', 
-                        help='Path to kaggle.json file with API credentials')
-    parser.add_argument('--new-version', action='store_true',
-                        help='Create a new version if the dataset already exists on Kaggle')
-    
     # Workflow options
     parser.add_argument('--skip-fetch', action='store_true',
                         help='Skip data fetching step (use existing data files)')
@@ -100,9 +86,10 @@ def main():
     
     # Check if required scripts exist
     required_files = [
-        "anilist_anime_scraper_final.py",
-        "kaggle_upload.py",
-        "kaggle_dataset_metadata.json"
+        "fetch_data.py",
+        "upload_data.py",
+        "kaggle_dataset_metadata.json",
+        "kaggle_dataset_description.md"
     ]
     
     missing_files = []
@@ -144,7 +131,7 @@ def main():
     
     # Step 2: Upload to Kaggle (unless skipped)
     if not args.skip_upload:
-        if not upload_to_kaggle(args.kaggle_json, args.new_version):
+        if not upload_to_kaggle():
             print("Error: Kaggle upload failed.")
             return 1
     else:

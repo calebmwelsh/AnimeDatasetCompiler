@@ -53,8 +53,7 @@ def setup_kaggle_credentials(kaggle_json_path=None):
         print(f"Using Kaggle credentials from: {kaggle_json_path}")
     else:
         print("Error: Kaggle credentials not found.")
-        print(f"Please provide a kaggle.json file with --kaggle-json parameter")
-        print("You can download this from https://www.kaggle.com/account")
+        print("Please provide a kaggle.json file with the correct credentials.")
         return False
     
     # Create the standard directory if it doesn't exist
@@ -158,7 +157,6 @@ def upload_dataset(metadata_path, description_path, dataset_dir):
 def main():
     """Main function to handle command line arguments and upload dataset"""
     parser = argparse.ArgumentParser(description='Upload AniList Anime Dataset to Kaggle')
-    parser.add_argument('--kaggle-json', help='Path to kaggle.json file with API credentials')
     parser.add_argument('--metadata', default='AnimeDatasetCompiler/data/kaggle/kaggle_dataset_metadata.json', 
                         help='Path to dataset metadata JSON file (default: AnimeDatasetCompiler/data/kaggle/kaggle_dataset_metadata.json)')
     parser.add_argument('--csv', default='anilist_anime_data_complete.csv',
@@ -171,9 +169,8 @@ def main():
                         help='Path to dataset description markdown file (default: AnimeDatasetCompiler/data/kaggle/kaggle_dataset_description.md)')
     args = parser.parse_args()
     
-    
     # Set up Kaggle credentials
-    if not setup_kaggle_credentials(args.kaggle_json):
+    if not setup_kaggle_credentials():
         return 1
     
     # Validate that all required files exist
@@ -193,7 +190,6 @@ def main():
     os.makedirs(dataset_dir, exist_ok=True)
     
     # Copy all files to the dataset directory
-    import shutil
     shutil.copy(args.csv, os.path.join(dataset_dir, os.path.basename(args.csv)))
     shutil.copy(args.excel, os.path.join(dataset_dir, os.path.basename(args.excel)))
     shutil.copy(args.pickle, os.path.join(dataset_dir, os.path.basename(args.pickle)))
