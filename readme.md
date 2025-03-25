@@ -39,10 +39,46 @@ This project includes Docker support for easier deployment and execution. See th
 - Building and running the container
 - Setting up Kaggle API credentials
 - Command-line options
-- Scheduling container runs using your host system's scheduler (cron/Task Scheduler)
+- Scheduling container runs
 - Troubleshooting common issues
 
 The Docker configuration automatically installs all required dependencies, so you don't need to worry about dependency management.
+
+### Scheduled Execution with Docker
+
+The Docker container is configured to run the script automatically every Sunday at 2:00 AM CST using cron.
+
+#### Customizing the Cron Schedule
+
+To change when the script runs:
+
+1. Edit the Dockerfile:
+
+```dockerfile
+# Find this line:
+RUN echo "0 2 * * 0 cd /app && python main.py >> /var/log/cron.log 2>&1" > /etc/cron.d/anime_collector_cron && \
+```
+
+2. Modify the cron expression `0 2 * * 0`:
+   - `0` - Minute (0-59)
+   - `2` - Hour (0-23)
+   - `*` - Day of month (1-31)
+   - `*` - Month (1-12)
+   - `0` - Day of week (0-6, where 0 is Sunday)
+
+Common examples:
+- `0 2 * * 0` - Every Sunday at 2:00 AM
+- `0 4 * * 1` - Every Monday at 4:00 AM
+- `0 0 1 * *` - First day of every month at midnight
+
+3. Rebuild and restart the container:
+
+```bash
+docker-compose build
+docker-compose up -d
+```
+
+For more detailed instructions on cron customization and monitoring, see the [Docker README](docker/docker-readme.md).
 
 ## Usage
 
@@ -99,15 +135,6 @@ After running the script, the following files will be created:
 - `data/raw/anilist_anime_data_complete.pkl`: Complete anime dataset in Python pickle format
 
 These files will also be uploaded to Kaggle as a dataset.
-
-## Scheduling
-
-For automated data collection, you can use Docker with your system's scheduler:
-
-- **Linux/Mac**: Use cron to schedule the Docker container to run weekly
-- **Windows**: Use Task Scheduler to run the Docker container weekly
-
-See the [Docker README](docker/docker-readme.md) for detailed scheduling instructions.
 
 ## License
 

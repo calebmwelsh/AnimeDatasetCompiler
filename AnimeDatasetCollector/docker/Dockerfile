@@ -12,8 +12,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
-# Install Python dependencies with minimal extras
-COPY requirements.txt .
+# Copy requirements from the new location
+COPY AnimeDatasetCollector/requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
@@ -30,18 +30,36 @@ ENV PATH="/opt/venv/bin:$PATH"
 RUN mkdir -p /app/data/raw /app/data/kaggle /root/.kaggle
 
 # Copy application files
-COPY main.py fetch_data.py upload_data.py ./
-COPY data/kaggle/kaggle_dataset_metadata.json ./data/kaggle/
-COPY data/kaggle/kaggle_dataset_description.md ./data/kaggle/
+COPY AnimeDatasetCollector/main.py AnimeDatasetCollector/fetch_data.py AnimeDatasetCollector/upload_data.py ./
+COPY AnimeDatasetCollector/data/kaggle/kaggle_dataset_metadata.json ./data/kaggle/
+COPY AnimeDatasetCollector/data/kaggle/kaggle_dataset_description.md ./data/kaggle/
 
-# Set permissions for Kaggle credentials (will be mounted at runtime)
-RUN chmod -R 777 /root/.kaggle
+# Set proper secure permissions for Kaggle credentials (will be mounted at runtime)
+RUN chmod -R 600 /root/.kaggle
+
+# Install cron for scheduling
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    cron \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create cron job to run the script every Sunday at 2am CST
+RUN echo "0 2 * * 0 cd /app && python main.py >> /var/log/cron.log 2>&1" > /etc/cron.d/anime_collector_cron && \
+    chmod 0644 /etc/cron.d/anime_collector_cron && \
+    crontab /etc/cron.d/anime_collector_cron
+
+# Create a startup script that starts cron and then runs the command
+RUN echo '#!/bin/bash\n\
+service cron start\n\
+echo "Cron service started. Script will run every Sunday at 2am CST."\n\
+exec "$@"' > /app/entrypoint.sh && \
+    chmod +x /app/entrypoint.sh
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
+ENV TZ=America/Chicago
 
-# Command to run the script
-ENTRYPOINT ["python", "main.py"]
+# Use our custom entrypoint script
+ENTRYPOINT ["/app/entrypoint.sh"]
 
-# Default arguments (can be overridden at runtime)
-CMD []
+# Default command to run the script immediately and then keep container running
+CMD ["python", "main.py", "&&", "tail", "-f", "/var/log/cron.log"]

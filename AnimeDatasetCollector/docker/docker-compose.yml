@@ -9,7 +9,9 @@ services:
       # Mount kaggle.json credentials file
       - ${KAGGLE_JSON_PATH:-~/.kaggle/kaggle.json}:/root/.kaggle/kaggle.json:ro
     environment:
-      # Optional environment variables
-      - TZ=America/Chicago  # Set timezone to CST
-    # Command can be overridden with docker-compose run
-    # Example: docker-compose run anilist-data-collector --test
+      # Set timezone to CST (America/Chicago)
+      - TZ=America/Chicago
+    # Keep the container running to allow cron to execute
+    tty: true
+    stdin_open: true
+    restart: unless-stopped
