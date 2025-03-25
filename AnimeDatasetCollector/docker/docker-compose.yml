@@ -1,10 +1,6 @@
-version: '3.8'
-
 services:
   anilist-data-collector:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: kdidtech/anilist-data-collector:latest
     volumes:
       # Mount kaggle.json credentials file
       - ${KAGGLE_JSON_PATH:-~/.kaggle/kaggle.json}:/root/.kaggle/kaggle.json:ro

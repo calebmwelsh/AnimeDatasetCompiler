@@ -36,13 +36,36 @@ For a detailed overview of the directory structure, see [DIRECTORY_STRUCTURE.md]
 
 This project includes Docker support for easier deployment and execution. See the [Docker README](docker/docker-readme.md) for detailed instructions on:
 
-- Building and running the container
+- Running the container from Docker Hub
 - Setting up Kaggle API credentials
 - Command-line options
 - Scheduling container runs
 - Troubleshooting common issues
 
 The Docker configuration automatically installs all required dependencies, so you don't need to worry about dependency management.
+
+### Using the Docker Image
+
+The project is available as a pre-built Docker image on Docker Hub:
+
+```bash
+# Pull the image
+docker pull kdidtech/anilist-data-collector:latest
+
+# Run the container
+docker run -d \
+    -v ~/.kaggle/kaggle.json:/root/.kaggle/kaggle.json:ro \
+    -e TZ=America/Chicago \
+    --restart unless-stopped \
+    kdidtech/anilist-data-collector:latest
+```
+
+Alternatively, you can use Docker Compose:
+
+```bash
+# Run with docker-compose
+docker-compose up -d
+```
 
 ### Scheduled Execution with Docker
 
@@ -74,7 +97,7 @@ Common examples:
 3. Rebuild and restart the container:
 
 ```bash
-docker-compose build
+docker build -t kdidtech/anilist-data-collector:latest .
 docker-compose up -d
 ```
 

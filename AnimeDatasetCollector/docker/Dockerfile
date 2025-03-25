@@ -12,10 +12,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
-# Copy requirements from the new location
-COPY AnimeDatasetCollector/requirements.txt .
+# Install Python dependencies directly
 RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+    pip install --no-cache-dir pandas requests tqdm openpyxl kaggle
 
 # Second stage: runtime image
 FROM python:3.10-slim
@@ -62,4 +61,4 @@ ENV TZ=America/Chicago
 ENTRYPOINT ["/app/entrypoint.sh"]
 
 # Default command to run the script immediately and then keep container running
-CMD ["python", "main.py", "&&", "tail", "-f", "/var/log/cron.log"]
+CMD ["python", "main.py"]

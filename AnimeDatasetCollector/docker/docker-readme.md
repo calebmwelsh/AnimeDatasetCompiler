@@ -23,17 +23,14 @@ Before running the container, you need to set up your Kaggle API credentials:
    - `C:\Users\<Windows-username>\.kaggle\kaggle.json` (Windows)
    - Or any location, and specify the path using the `KAGGLE_JSON_PATH` environment variable
 
-### 2. Building and Running the Container
+### 2. Running the Container
 
 #### Option 1: Using Docker Compose (Recommended)
 
 1. Make sure you're in the directory containing the `docker-compose.yml` file
-2. Build and run the container:
+2. Run the container:
 
 ```bash
-# Build the container
-docker-compose build
-
 # Run the container in detached mode
 docker-compose up -d
 
@@ -41,22 +38,18 @@ docker-compose up -d
 docker-compose logs
 ```
 
+The docker-compose.yml file is configured to pull the pre-built image from Docker Hub (`kdidtech/anilist-data-collector:latest`).
+
 #### Option 2: Using Docker Directly
 
-1. Build the Docker image:
-
-```bash
-docker build -t anilist-data-collector .
-```
-
-2. Run the container:
+Run the container:
 
 ```bash
 docker run -d \
     -v ~/.kaggle/kaggle.json:/root/.kaggle/kaggle.json:ro \
     -e TZ=America/Chicago \
     --restart unless-stopped \
-    anilist-data-collector
+    kdidtech/anilist-data-collector:latest
 ```
 
 ## Command Line Options
@@ -108,10 +101,24 @@ Examples:
 - `0 0 1 * *` - First day of every month at midnight
 - `0 12 * * 1-5` - Every weekday at noon
 
-3. Rebuild the container:
+3. Build a custom image with your changes:
 
 ```bash
-docker-compose build
+docker build -t kdidtech/anilist-data-collector:custom .
+```
+
+4. Update your docker-compose.yml to use your custom image:
+
+```yaml
+services:
+  anilist-data-collector:
+    image: kdidtech/anilist-data-collector:custom
+    # rest of configuration...
+```
+
+5. Start the container:
+
+```bash
 docker-compose up -d
 ```
 
