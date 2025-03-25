@@ -1,199 +1,117 @@
-# AniList Anime Dataset Creator
+# AniList Anime Dataset Collector
 
-A comprehensive solution for creating and maintaining a complete dataset of all anime from AniList.co using their GraphQL API, with options to upload the dataset to Kaggle.
+This project fetches comprehensive anime data from AniList using their GraphQL API and uploads it to Kaggle as a dataset. It collects all available attributes for each anime title, including basic information, statistics, characters, staff, studios, and more.
 
-## Overview
+## Project Structure
 
-This project provides tools to:
+- `main.py`: Main script that orchestrates the data collection and upload workflow
+- `fetch_data.py`: Script that fetches anime data from AniList GraphQL API
+- `upload_data.py`: Script that uploads the dataset to Kaggle
+- `data/kaggle/kaggle_dataset_metadata.json`: Metadata for the Kaggle dataset
+- `data/kaggle/kaggle_dataset_description.md`: Detailed description of the dataset
 
-1. **Fetch anime data** from AniList using their GraphQL API
-2. **Create a structured dataset** with all available anime attributes
-3. **Upload the dataset to Kaggle** for sharing and analysis
-4. **Run the entire workflow** with a single command
+## Features
 
-The resulting dataset includes approximately 21,000 anime titles with comprehensive information about each title, including basic details, statistics, characters, staff, studios, and more.
+- Fetches all anime data from AniList using their GraphQL API
+- Overcomes the 5,000 anime limitation by using year-based filtering
+- Properly handles FuzzyDateInt format used by AniList
+- Creates a comprehensive dataset with all available attributes
+- Exports data in multiple formats (CSV, Excel, Pickle)
+- Uploads the dataset to Kaggle with proper metadata and description
 
-## Components
+## Requirements
 
-This project consists of several components:
-
-- **`fetch_data.py`**: Fetches anime data from AniList and creates the dataset
-- **`upload_data.py`**: Uploads the dataset to Kaggle
-- **`main.py`**: Combines both scripts into a single workflow
-- **`data/kaggle/kaggle_dataset_metadata.json`**: Metadata for the Kaggle dataset
-- **`data/kaggle/kaggle_dataset_description.md`**: Detailed description of the dataset columns
-- **`data/kaggle/kaggle.json`**: Kaggle API credentials
-
-## Installation
-
-### Prerequisites
-
-- Python 3.6 or higher
+- Python 3.6+
+- Kaggle API credentials
 - Required Python packages:
   - pandas
   - requests
   - tqdm
-  - openpyxl (for Excel export)
-  - kaggle (for Kaggle upload)
+  - openpyxl
+  - kaggle
 
-### Install Dependencies
+## Docker Support
 
-```bash
-pip install pandas requests tqdm openpyxl kaggle
-```
+This project now includes Docker support for easier deployment and execution. See the [Docker README](DOCKER_README.md) for detailed instructions on:
 
-### Kaggle API Setup
+- Building and running the container
+- Setting up Kaggle API credentials
+- Command-line options
+- Scheduling container runs using your host system's scheduler (cron/Task Scheduler)
+- Troubleshooting common issues
 
-To use the Kaggle upload functionality:
-
-1. Create a Kaggle account if you don't have one
-2. Go to https://www.kaggle.com/account
-3. Scroll down to the "API" section and click "Create New API Token"
-4. This will download a `kaggle.json` file with your credentials
-5. You have three options for placing your credentials:
-   - **Project-specific location**: Place at `data/kaggle/kaggle.json` in your project directory
-   - **Standard location (Linux/Mac)**: Place at `~/.kaggle/kaggle.json`
-   - **Standard location (Windows)**: Place at `C:\Users\<Windows-username>\.kaggle\kaggle.json`
-
-The script will check these locations in order and use the first one it finds.
+The Docker configuration automatically installs all required dependencies, so you don't need to worry about dependency management.
 
 ## Usage
 
-### Fetching Anime Data
+### Manual Execution
 
-To fetch all anime data from AniList:
-
-```bash
-python fetch_data.py
-```
-
-Options:
-- `--test`: Run in test mode (fetches a limited dataset for testing)
-
-This will create three output files:
-- `anilist_anime_data_complete.csv`: CSV format
-- `anilist_anime_data_complete.xlsx`: Excel format
-- `anilist_anime_data_complete.pkl`: Python pickle format
-
-### Uploading to Kaggle
-
-To upload the dataset to Kaggle:
-
-```bash
-python upload_data.py
-```
-
-The script will automatically:
-- Look for Kaggle credentials in the standard locations or at `data/kaggle/kaggle.json`
-- Look for metadata files in the `data/kaggle/` directory:
-  - `data/kaggle/kaggle_dataset_metadata.json`
-  - `data/kaggle/kaggle_dataset_description.md`
-
-Options:
-- `--kaggle-json PATH`: Path to your Kaggle credentials file (if not in standard locations)
-- `--metadata PATH`: Custom path to metadata file (default: `data/kaggle/kaggle_dataset_metadata.json`)
-- `--description PATH`: Custom path to description file (default: `data/kaggle/kaggle_dataset_description.md`)
-- `--new-version`: Create a new version if the dataset already exists
-
-### Complete Workflow
-
-To run the entire process (fetch data and upload to Kaggle):
+1. Clone this repository
+2. Set up Kaggle API credentials (see below)
+3. Install required dependencies: `pip install pandas requests tqdm openpyxl kaggle`
+4. Run the main script:
 
 ```bash
 python main.py
 ```
 
-Options:
-- **Data Fetching Options:**
-  - `--test`: Run data fetching in test mode (limited data)
-  - `--skip-fetch`: Skip the data fetching step (use existing data files)
+### Command Line Options
 
-- **Kaggle Upload Options:**
-  - `--kaggle-json PATH`: Path to your kaggle.json credentials file (if not in standard locations)
-  - `--new-version`: Create a new version if the dataset already exists
-  - `--skip-upload`: Skip the Kaggle upload step
+The main script accepts the following command-line arguments:
 
-## Dataset Structure
+- `--test`: Run data fetching in test mode (limited data)
+- `--skip-fetch`: Skip data fetching step (use existing data files)
+- `--skip-upload`: Skip Kaggle upload step
 
-The dataset includes a wide range of attributes for each anime:
+Examples:
 
-- **Basic Information**: ID, titles, format, status, dates, episodes, etc.
-- **Images**: Cover images, banner images
-- **Trailer Information**: Trailer links and thumbnails
-- **Tags and Genres**: Categorization and content tags
-- **Statistics and Scores**: Popularity, ratings, rankings
-- **Characters**: Character information and voice actors
-- **Staff**: Production staff and roles
-- **Studios**: Animation studios and production companies
-- **Airing Information**: Episode schedules and next episodes
-- **Recommendations and Reviews**: User recommendations and reviews
+```bash
+# Run in test mode
+python main.py --test
 
-For a complete description of all columns, see `data/kaggle/kaggle_dataset_description.md`.
+# Skip data fetching, only upload existing data
+python main.py --skip-fetch
 
-## Working with JSON Columns
-
-Many columns contain JSON data (arrays or objects) to preserve the nested structure of the original API response. To work with these columns in Python:
-
-```python
-import pandas as pd
-import json
-
-# Load the dataset
-df = pd.read_csv('anilist_anime_data_complete.csv')
-
-# Parse a JSON column
-df['genres_parsed'] = df['genres'].apply(json.loads)
-
-# Example: Get the first genre for each anime
-df['first_genre'] = df['genres_parsed'].apply(lambda x: x[0] if len(x) > 0 else None)
+# Skip Kaggle upload, only fetch data
+python main.py --skip-upload
 ```
 
-## Overcoming API Limitations
+## Kaggle API Setup
 
-The AniList API has a limitation of returning only 5,000 anime entries (100 pages with 50 entries each). This project overcomes this limitation by using year-based filtering to fetch anime in batches:
+Before running the script, you need to set up your Kaggle API credentials:
 
-- Recent years (last 10 years): Fetched individually
-- Previous decade: Fetched in 2-year ranges
-- Earlier decades: Fetched in 5-year ranges
-- Oldest anime: Fetched in a single large range
+1. Log in to your Kaggle account
+2. Go to your account settings (https://www.kaggle.com/settings)
+3. Scroll down to the "API" section and click "Create New API Token"
+4. This will download a `kaggle.json` file containing your API credentials
+5. Place this file in one of these locations:
+   - `~/.kaggle/kaggle.json` (Linux/Mac)
+   - `C:\Users\<Windows-username>\.kaggle\kaggle.json` (Windows)
 
-This approach allows the script to retrieve all ~21,000 anime from AniList.
+## Dataset Output
 
-## Example Use Cases
+After running the script, the following files will be created:
 
-The resulting dataset can be used for:
+- `anilist_anime_data_complete.csv`: Complete anime dataset in CSV format
+- `anilist_anime_data_complete.xlsx`: Complete anime dataset in Excel format
+- `anilist_anime_data_complete.pkl`: Complete anime dataset in Python pickle format
 
-1. **Anime Recommendation Systems**: Build recommendation algorithms based on genres, tags, and scores
-2. **Trend Analysis**: Analyze popularity and score trends over time or by season
-3. **Network Analysis**: Study relationships between studios, staff, and anime productions
-4. **Content Analysis**: Examine the distribution of genres, themes, and content types
-5. **Seasonal Analysis**: Investigate patterns in anime releases by season and year
+These files will also be uploaded to Kaggle as a dataset.
 
-## Troubleshooting
+## Scheduling
 
-### Common Issues
+For automated data collection, you can now use Docker with your system's scheduler:
 
-- **API Rate Limiting**: The script includes built-in handling for rate limits, but if you encounter persistent rate limiting, try running with longer intervals between requests
-- **Missing Kaggle Credentials**: Ensure your `kaggle.json` file is properly formatted and located in one of the supported locations:
-  - Standard location: `~/.kaggle/kaggle.json` (Linux/Mac) or `C:\Users\<Windows-username>\.kaggle\kaggle.json` (Windows)
-  - Project location: `data/kaggle/kaggle.json`
-- **Missing Metadata Files**: Ensure the metadata files exist at:
-  - `data/kaggle/kaggle_dataset_metadata.json`
-  - `data/kaggle/kaggle_dataset_description.md`
-- **File Not Found Errors**: Make sure all script files are in the same directory or provide full paths to files
+- **Linux/Mac**: Use cron to schedule the Docker container to run weekly
+- **Windows**: Use Task Scheduler to run the Docker container weekly
 
-### Getting Help
-
-If you encounter issues:
-1. Check that all dependencies are installed
-2. Verify your Kaggle credentials are correct
-3. Run scripts with the `--test` flag to verify basic functionality
+See the [Docker README](DOCKER_README.md) for detailed scheduling instructions.
 
 ## License
 
-This project is released under the MIT License. See the LICENSE file for details.
+This project is licensed under the MIT License - see the LICENSE file for details.
 
-## Acknowledgments
+## Acknowledgements
 
 - [AniList](https://anilist.co) for providing the GraphQL API
-- [Kaggle](https://www.kaggle.com) for hosting datasets
+- [Kaggle](https://kaggle.com) for hosting the dataset

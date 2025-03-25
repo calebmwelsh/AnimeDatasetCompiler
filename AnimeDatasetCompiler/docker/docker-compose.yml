@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  anilist-data-collector:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      # Mount kaggle.json credentials file
+      - ${KAGGLE_JSON_PATH:-~/.kaggle/kaggle.json}:/root/.kaggle/kaggle.json:ro
+    environment:
+      # Optional environment variables
+      - TZ=America/Chicago  # Set timezone to CST
+    # Command can be overridden with docker-compose run
+    # Example: docker-compose run anilist-data-collector --test

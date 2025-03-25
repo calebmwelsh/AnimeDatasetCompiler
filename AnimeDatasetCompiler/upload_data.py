@@ -157,16 +157,18 @@ def upload_dataset(metadata_path, description_path, dataset_dir):
 def main():
     """Main function to handle command line arguments and upload dataset"""
     parser = argparse.ArgumentParser(description='Upload AniList Anime Dataset to Kaggle')
-    parser.add_argument('--metadata', default='AnimeDatasetCompiler/data/kaggle/kaggle_dataset_metadata.json', 
-                        help='Path to dataset metadata JSON file (default: AnimeDatasetCompiler/data/kaggle/kaggle_dataset_metadata.json)')
-    parser.add_argument('--csv', default='anilist_anime_data_complete.csv',
-                        help='Path to CSV dataset file (default: anilist_anime_data_complete.csv)')
-    parser.add_argument('--excel', default='anilist_anime_data_complete.xlsx',
-                        help='Path to Excel dataset file (default: anilist_anime_data_complete.xlsx)')
-    parser.add_argument('--pickle', default='anilist_anime_data_complete.pkl',
-                        help='Path to pickle dataset file (default: anilist_anime_data_complete.pkl)')
-    parser.add_argument('--description', default='AnimeDatasetCompiler/data/kaggle/kaggle_dataset_description.md',
-                        help='Path to dataset description markdown file (default: AnimeDatasetCompiler/data/kaggle/kaggle_dataset_description.md)')
+    parser.add_argument('--metadata', default='data/kaggle/kaggle_dataset_metadata.json', 
+                        help='Path to dataset metadata JSON file (default: data/kaggle/kaggle_dataset_metadata.json)')
+    parser.add_argument('--csv', default='data/raw/anilist_anime_data_complete.csv',
+                        help='Path to CSV dataset file (default: data/raw/anilist_anime_data_complete.csv)')
+    parser.add_argument('--excel', default='data/raw/anilist_anime_data_complete.xlsx',
+                        help='Path to Excel dataset file (default: data/raw/anilist_anime_data_complete.xlsx)')
+    parser.add_argument('--pickle', default='data/raw/anilist_anime_data_complete.pkl',
+                        help='Path to pickle dataset file (default: data/raw/anilist_anime_data_complete.pkl)')
+    parser.add_argument('--fetch_data', default='fetch_data.py',
+                        help='Path to python data fetching file (default: fetch_data.py)')
+    parser.add_argument('--description', default='data/kaggle/kaggle_dataset_description.md',
+                        help='Path to dataset description markdown file (default: data/kaggle/kaggle_dataset_description.md)')
     args = parser.parse_args()
     
     # Set up Kaggle credentials
@@ -179,6 +181,7 @@ def main():
         args.csv,
         args.excel,
         args.pickle,
+        args.fetch_data,
         args.description
     ]
     
@@ -193,6 +196,7 @@ def main():
     shutil.copy(args.csv, os.path.join(dataset_dir, os.path.basename(args.csv)))
     shutil.copy(args.excel, os.path.join(dataset_dir, os.path.basename(args.excel)))
     shutil.copy(args.pickle, os.path.join(dataset_dir, os.path.basename(args.pickle)))
+    shutil.copy(args.fetch_data, os.path.join(dataset_dir, os.path.basename(args.fetch_data)))
     
     # Copy the description file with the correct name for Kaggle
     description_dest = os.path.join(dataset_dir, 'kaggle_dataset_description.md')

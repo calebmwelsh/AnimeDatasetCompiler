@@ -51,7 +51,7 @@ def fetch_anilist_data(test_mode=False):
     Returns:
         bool: True if data fetching succeeded, False otherwise
     """
-    command = ["python3", "fetch_data.py"]
+    command = ["python", "fetch_data.py"]
     if test_mode:
         command.append("--test")
     
@@ -64,7 +64,7 @@ def upload_to_kaggle():
     Returns:
         bool: True if upload succeeded, False otherwise
     """
-    command = ["python3", "upload_data.py"]
+    command = ["python", "upload_data.py"]
     return run_command(command, "Uploading dataset to Kaggle")
 
 def main():
@@ -88,8 +88,8 @@ def main():
     required_files = [
         "fetch_data.py",
         "upload_data.py",
-        "kaggle_dataset_metadata.json",
-        "kaggle_dataset_description.md"
+        "data/kaggle/kaggle_dataset_metadata.json",
+        "data/kaggle/kaggle_dataset_description.md",
     ]
     
     missing_files = []
@@ -111,9 +111,9 @@ def main():
         
         # Check if data files were created
         data_files = [
-            "anilist_anime_data_complete.csv",
-            "anilist_anime_data_complete.xlsx",
-            "anilist_anime_data_complete.pkl"
+            "data/raw/anilist_anime_data_complete.csv",
+            "data/raw/anilist_anime_data_complete.xlsx",
+            "data/raw/anilist_anime_data_complete.pkl"
         ]
         
         missing_data = []

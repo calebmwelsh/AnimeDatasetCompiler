@@ -33,6 +33,10 @@
     {
       "path": "kaggle_dataset_description.md",
       "description": "Detailed description of dataset columns and structure"
+    },
+    {
+      "path": "fetch_data.py",
+      "description": "Python script to fetch and preprocess the dataset"
     }
   ]
 }

@@ -342,7 +342,7 @@ def fetch_anime_page(page, per_page=50, start_year=None, end_year=None):
     # Handle rate limiting
     if response.status_code == 429:
         retry_after = int(response.headers.get('Retry-After', 60))
-        print(f"Rate limited. Waiting for {retry_after} seconds...")
+        print(f"\nRate limited. Waiting for {retry_after} seconds...")
         time.sleep(retry_after)
         return fetch_anime_page(page, per_page, start_year, end_year)
     
@@ -723,22 +723,31 @@ def main():
     if df.empty:
         print("Failed to fetch anime data")
         return
-    
+      
+    # Create data dir
+    directory_path = os.path.join("data", "raw")
+    if not os.path.exists(directory_path):
+        os.makedirs(directory_path)
+        print(f"Created directory: {directory_path}")
+    else:
+        print(f"Directory already exists: {directory_path}")
+        
+        
     # Save to CSV
-    csv_filename = "anilist_anime_data_complete.csv"
+    csv_filename = "data/raw/anilist_anime_data_complete.csv"
     df.to_csv(csv_filename, index=True)
     print(f"Saved {len(df)} anime records to {csv_filename}")
     
     # Save to Excel (optional)
     try:
-        excel_filename = "anilist_anime_data_complete.xlsx"
+        excel_filename = "data/raw/anilist_anime_data_complete.xlsx"
         df.to_excel(excel_filename, index=True)
         print(f"Saved {len(df)} anime records to {excel_filename}")
     except Exception as e:
         print(f"Warning: Could not save to Excel format: {e}")
     
     # Save to pickle for easier reloading (optional)
-    pickle_filename = "anilist_anime_data_complete.pkl"
+    pickle_filename = "data/raw/anilist_anime_data_complete.pkl"
     df.to_pickle(pickle_filename)
     print(f"Saved {len(df)} anime records to {pickle_filename}")
     
