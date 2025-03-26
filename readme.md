@@ -52,10 +52,11 @@ The project is available as a pre-built Docker image on Docker Hub:
 # Pull the image
 docker pull kdidtech/anilist-data-collector:latest
 
-# Run the container
+# Run the container with initial data collection
 docker run -d \
     -v ~/.kaggle/kaggle.json:/root/.kaggle/kaggle.json:ro \
     -e TZ=America/Chicago \
+    -e INITIAL_RUN=true \
     --restart unless-stopped \
     kdidtech/anilist-data-collector:latest
 ```
@@ -65,6 +66,29 @@ Alternatively, you can use Docker Compose:
 ```bash
 # Run with docker-compose
 docker-compose up -d
+```
+
+### Conditional Execution Control
+
+The Docker container supports conditional execution through the `INITIAL_RUN` environment variable:
+
+- `INITIAL_RUN=true`: The container will run the data collection immediately upon startup and then continue with scheduled cron executions
+- `INITIAL_RUN=false`: The container will skip the initial run and only execute according to the cron schedule
+
+This gives you flexibility to control whether the script runs immediately or waits for the scheduled time:
+
+```bash
+# Run with immediate execution
+docker run -d \
+    -v ~/.kaggle/kaggle.json:/root/.kaggle/kaggle.json:ro \
+    -e INITIAL_RUN=true \
+    kdidtech/anilist-data-collector:latest
+
+# Run without immediate execution (wait for cron schedule)
+docker run -d \
+    -v ~/.kaggle/kaggle.json:/root/.kaggle/kaggle.json:ro \
+    -e INITIAL_RUN=false \
+    kdidtech/anilist-data-collector:latest
 ```
 
 ### Scheduled Execution with Docker

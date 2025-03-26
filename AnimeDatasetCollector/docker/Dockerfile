@@ -46,19 +46,28 @@ RUN echo "0 2 * * 0 cd /app && python main.py >> /var/log/cron.log 2>&1" > /etc/
     chmod 0644 /etc/cron.d/anime_collector_cron && \
     crontab /etc/cron.d/anime_collector_cron
 
-# Create a startup script that starts cron and then runs the command
+# Create a startup script that starts cron and handles conditional execution
 RUN echo '#!/bin/bash\n\
 service cron start\n\
 echo "Cron service started. Script will run every Sunday at 2am CST."\n\
-exec "$@"' > /app/entrypoint.sh && \
+touch /var/log/cron.log\n\
+if [ "$INITIAL_RUN" = "true" ]; then\n\
+  echo "Performing initial data collection run..."\n\
+  cd /app && python main.py\n\
+  echo "Initial run completed. Future runs will be scheduled via cron."\n\
+else\n\
+  echo "No initial run requested. Waiting for scheduled cron job."\n\
+fi\n\
+exec tail -f /var/log/cron.log' > /app/entrypoint.sh && \
     chmod +x /app/entrypoint.sh
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
 ENV TZ=America/Chicago
+ENV INITIAL_RUN=false
 
 # Use our custom entrypoint script
 ENTRYPOINT ["/app/entrypoint.sh"]
 
-# Default command to run the script immediately and then keep container running
-CMD ["python", "main.py"]
+# Keep container running without executing main.py directly
+CMD ["tail", "-f", "/var/log/cron.log"]

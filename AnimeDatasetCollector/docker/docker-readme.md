@@ -48,9 +48,67 @@ Run the container:
 docker run -d \
     -v ~/.kaggle/kaggle.json:/root/.kaggle/kaggle.json:ro \
     -e TZ=America/Chicago \
+    -e INITIAL_RUN=true \
     --restart unless-stopped \
     kdidtech/anilist-data-collector:latest
 ```
+
+## Conditional Execution Control
+
+The Docker container now supports conditional execution through the `INITIAL_RUN` environment variable:
+
+- `INITIAL_RUN=true`: The container will run the data collection immediately upon startup and then continue with scheduled cron executions
+- `INITIAL_RUN=false`: The container will skip the initial run and only execute according to the cron schedule
+
+### Using with Docker Compose
+
+In your docker-compose.yml file:
+
+```yaml
+services:
+  anilist-data-collector:
+    image: kdidtech/anilist-data-collector:latest
+    volumes:
+      # Mount kaggle.json credentials file
+      - ${KAGGLE_JSON_PATH:-~/.kaggle/kaggle.json}:/root/.kaggle/kaggle.json:ro
+    environment:
+      # Set timezone to CST (America/Chicago)
+      - TZ=America/Chicago
+      # Control whether to run initially or wait for cron
+      - INITIAL_RUN=true  # Set to "true" for initial run, "false" to skip
+```
+
+### Using with Docker Run
+
+```bash
+# Run with immediate execution
+docker run -d \
+    -v ~/.kaggle/kaggle.json:/root/.kaggle/kaggle.json:ro \
+    -e TZ=America/Chicago \
+    -e INITIAL_RUN=true \
+    --restart unless-stopped \
+    kdidtech/anilist-data-collector:latest
+
+# Run without immediate execution (wait for cron schedule)
+docker run -d \
+    -v ~/.kaggle/kaggle.json:/root/.kaggle/kaggle.json:ro \
+    -e TZ=America/Chicago \
+    -e INITIAL_RUN=false \
+    --restart unless-stopped \
+    kdidtech/anilist-data-collector:latest
+```
+
+### Checking Execution Status
+
+You can check whether the container performed an initial run by viewing the logs:
+
+```bash
+docker-compose logs anilist-data-collector
+```
+
+Look for messages like:
+- "Performing initial data collection run..." (when INITIAL_RUN=true)
+- "No initial run requested. Waiting for scheduled cron job." (when INITIAL_RUN=false)
 
 ## Command Line Options
 
@@ -177,6 +235,28 @@ docker-compose exec anilist-data-collector grep CRON /var/log/syslog
 
 ```bash
 docker-compose exec anilist-data-collector date
+```
+
+### Initial Run Not Executing
+
+If the initial run isn't executing when INITIAL_RUN=true:
+
+1. Check if the environment variable is properly set:
+
+```bash
+docker-compose exec anilist-data-collector env | grep INITIAL_RUN
+```
+
+2. Verify the entrypoint script is working correctly:
+
+```bash
+docker-compose exec anilist-data-collector cat /app/entrypoint.sh
+```
+
+3. Check container logs for any error messages:
+
+```bash
+docker-compose logs anilist-data-collector
 ```
 
 ## Docker Image Size Optimization

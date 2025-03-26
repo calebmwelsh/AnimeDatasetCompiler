@@ -7,6 +7,8 @@ services:
     environment:
       # Set timezone to CST (America/Chicago)
       - TZ=America/Chicago
+      # Control whether to run initially or wait for cron
+      - INITIAL_RUN=true  # Set to "true" for initial run, "false" to skip
     # Keep the container running to allow cron to execute
     tty: true
     stdin_open: true
