@@ -36,38 +36,14 @@ COPY AnimeDatasetCollector/data/kaggle/kaggle_dataset_description.md ./data/kagg
 # Set proper secure permissions for Kaggle credentials (will be mounted at runtime)
 RUN chmod -R 600 /root/.kaggle
 
-# Install cron for scheduling
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    cron \
-    && rm -rf /var/lib/apt/lists/*
-
-# Create cron job to run the script every Sunday at 2am CST
-RUN echo "0 2 * * 0 cd /app && python main.py >> /var/log/cron.log 2>&1" > /etc/cron.d/anime_collector_cron && \
-    chmod 0644 /etc/cron.d/anime_collector_cron && \
-    crontab /etc/cron.d/anime_collector_cron
-
-# Create a startup script that starts cron and handles conditional execution
-RUN echo '#!/bin/bash\n\
-service cron start\n\
-echo "Cron service started. Script will run every Sunday at 2am CST."\n\
-touch /var/log/cron.log\n\
-if [ "$INITIAL_RUN" = "true" ]; then\n\
-  echo "Performing initial data collection run..."\n\
-  cd /app && python main.py\n\
-  echo "Initial run completed. Future runs will be scheduled via cron."\n\
-else\n\
-  echo "No initial run requested. Waiting for scheduled cron job."\n\
-fi\n\
-exec tail -f /var/log/cron.log' > /app/entrypoint.sh && \
-    chmod +x /app/entrypoint.sh
-
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
 ENV TZ=America/Chicago
-ENV INITIAL_RUN=false
 
-# Use our custom entrypoint script
-ENTRYPOINT ["/app/entrypoint.sh"]
+# Create a simple wrapper script that can be called by Ofelia
+RUN echo '#!/bin/bash\n\
+/opt/venv/bin/python /app/main.py "$@"' > /app/run.sh && \
+chmod +x /app/run.sh
 
-# Keep container running without executing main.py directly
-CMD ["tail", "-f", "/var/log/cron.log"]
+# Use a passive entrypoint that keeps the container running
+ENTRYPOINT ["tail", "-f", "/dev/null"]

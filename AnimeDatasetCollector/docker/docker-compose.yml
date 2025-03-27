@@ -1,15 +1,37 @@
 services:
   anilist-data-collector:
     image: kdidtech/anilist-data-collector:latest
+    container_name: anilist-data-collector
     volumes:
       # Mount kaggle.json credentials file
       - ${KAGGLE_JSON_PATH:-~/.kaggle/kaggle.json}:/root/.kaggle/kaggle.json:ro
+      # Optional: Mount a local directory to persist data between runs
+      - ./anime_data:/app/data
     environment:
       # Set timezone to CST (America/Chicago)
       - TZ=America/Chicago
-      # Control whether to run initially or wait for cron
-      - INITIAL_RUN=true  # Set to "true" for initial run, "false" to skip
-    # Keep the container running to allow cron to execute
-    tty: true
-    stdin_open: true
+    # Container will be managed by Ofelia scheduler
+    # No need to specify command as it will use the CMD from Dockerfile
     restart: unless-stopped
+    
+  scheduler:
+    image: mcuadros/ofelia:latest
+    container_name: anime-data-collection-scheduler
+    command: daemon --docker
+    depends_on:
+      - anilist-data-collector
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      # Set the same timezone as the data collector
+      - TZ=America/Chicago
+    restart: unless-stopped
+    labels:
+      # Schedule the job to run every Sunday at 2am CST
+      ofelia.job-exec.anime-data-collection-job.schedule: "0 2 * * 0"
+      ofelia.job-exec.anime-data-collection-job.command: "/opt/venv/bin/python /app/main.py"
+      ofelia.job-exec.anime-data-collection-job.container: "anilist-data-collector"
+
+
+
+
