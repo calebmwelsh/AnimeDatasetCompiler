@@ -1,18 +1,87 @@
-# Docker Setup for AniList Anime Dataset Collector with Ofelia Scheduler
+# AniList Anime Dataset Collector
 
-This document provides instructions for running the AniList Anime Dataset Collector using Docker with Ofelia for scheduling.
+This project fetches comprehensive anime data from AniList using their GraphQL API and uploads it to Kaggle as a dataset. It collects all available attributes for each anime title, including basic information, statistics, characters, staff, studios, and more.
 
-## Prerequisites
+## Features
 
-- [Docker](https://docs.docker.com/get-docker/) installed on your system
-- [Docker Compose](https://docs.docker.com/compose/install/) installed on your system
-- Kaggle API credentials (kaggle.json file)
+- **Comprehensive Data Collection**: Fetches all anime data from AniList using their GraphQL API
+- **API Limitation Workaround**: Overcomes the 5,000 anime limitation by using year-based filtering
+- **Data Format Handling**: Properly handles FuzzyDateInt format used by AniList
+- **Complete Attribute Set**: Creates a comprehensive dataset with all available attributes
+- **Multiple Export Formats**: Exports data in multiple formats (CSV, Excel, Pickle)
+- **Automated Kaggle Upload**: Uploads the dataset to Kaggle with proper metadata and description
+- **Scheduled Updates**: Supports scheduled execution to keep the dataset up-to-date
+- **Docker Support**: Includes Docker configuration for easy deployment and execution
 
-## Getting Started
+## Dataset Contents
 
-### 1. Kaggle API Setup
+The collected dataset includes the following information for each anime:
 
-Before running the container, you need to set up your Kaggle API credentials:
+- **Basic Information**: ID, title, format, episodes, duration, status, season, year
+- **Content Details**: genres, tags, description, source material, rating, content warnings
+- **Statistics**: popularity, favorites, average score, trending rank
+- **Related Entities**: characters, staff, studios, producers
+- **External Links**: official site, streaming platforms, social media
+- **Dates**: start date, end date, next airing episode
+
+## Project Structure
+
+- `main.py`: Main script that orchestrates the data collection and upload workflow
+- `fetch_data.py`: Script that fetches anime data from AniList GraphQL API
+- `upload_data.py`: Script that uploads the dataset to Kaggle
+- `data/kaggle/kaggle_dataset_metadata.json`: Metadata for the Kaggle dataset
+- `data/kaggle/kaggle_dataset_description.md`: Detailed description of the dataset
+
+For a detailed overview of the directory structure, see [DIRECTORY_STRUCTURE.md](DIRECTORY_STRUCTURE.md).
+
+## Requirements
+
+- Python 3.6+
+- Kaggle API credentials
+- Required Python packages:
+  - pandas
+  - requests
+  - tqdm
+  - openpyxl
+  - kaggle
+
+## Usage
+
+### Manual Execution
+
+1. Clone this repository
+2. Set up Kaggle API credentials (see below)
+3. Install required dependencies: `pip install -r requirements.txt`
+4. Run the main script:
+
+```bash
+python main.py
+```
+
+### Command Line Options
+
+The main script accepts the following command-line arguments:
+
+- `--test`: Run data fetching in test mode (limited data)
+- `--skip-fetch`: Skip data fetching step (use existing data files)
+- `--skip-upload`: Skip Kaggle upload step
+
+Examples:
+
+```bash
+# Run in test mode
+python main.py --test
+
+# Skip data fetching, only upload existing data
+python main.py --skip-fetch
+
+# Skip Kaggle upload, only fetch data
+python main.py --skip-upload
+```
+
+## Kaggle API Setup
+
+Before running the script, you need to set up your Kaggle API credentials:
 
 1. Log in to your Kaggle account
 2. Go to your account settings (https://www.kaggle.com/settings)
@@ -21,277 +90,51 @@ Before running the container, you need to set up your Kaggle API credentials:
 5. Place this file in one of these locations:
    - `~/.kaggle/kaggle.json` (Linux/Mac)
    - `C:\Users\<Windows-username>\.kaggle\kaggle.json` (Windows)
-   - Or any location, and specify the path using the `KAGGLE_JSON_PATH` environment variable
 
-### 2. Setting Up Ofelia Scheduler
+## Dataset Output
 
-#### What is Ofelia?
+After running the script, the following files will be created:
 
-Ofelia is a Docker job scheduler that can run commands, scripts, or Docker containers on a schedule. It's designed specifically for Docker environments and avoids the limitations of using cron inside containers.
+- `data/raw/anilist_anime_data_complete.csv`: Complete anime dataset in CSV format
+- `data/raw/anilist_anime_data_complete.xlsx`: Complete anime dataset in Excel format
+- `data/raw/anilist_anime_data_complete.pkl`: Complete anime dataset in Python pickle format
 
-#### Creating the Docker Compose File
+These files will also be uploaded to Kaggle as a dataset.
 
-Create a `docker-compose.yml` file with the following content:
+## Docker Support
 
-```yaml
-version: '3'
+This project includes Docker support for easier deployment and scheduled execution. The Docker configuration:
 
-services:
-  anilist-data-collector:
-    image: kdidtech/anilist-data-collector:latest
-    container_name: anilist-data-collector
-    volumes:
-      # Mount kaggle.json credentials file
-      - ~/.kaggle/kaggle.json:/root/.kaggle/kaggle.json:ro
-      # Optional: Mount a local directory to persist data between runs
-      - ./anime_data:/app/data
-    environment:
-      # Set timezone to CST (America/Chicago)
-      - TZ=America/Chicago
-    # Container will be managed by Ofelia scheduler
-    restart: "no"
-    
-  scheduler:
-    image: mcuadros/ofelia:latest
-    container_name: anime-scheduler
-    command: daemon --docker
-    depends_on:
-      - anilist-data-collector
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-    restart: unless-stopped
-    labels:
-      # Schedule the job to run every Sunday at 2am CST
-      ofelia.job-exec.anime-job.schedule: "0 2 * * 0"
-      ofelia.job-exec.anime-job.command: "/opt/venv/bin/python /app/main.py"
-      ofelia.job-exec.anime-job.container: "anilist-data-collector"
-      # Optional: Run the job immediately when the scheduler starts
-      ofelia.job-run.initial-run.schedule: "@every 10s"
-      ofelia.job-run.initial-run.command: "anilist-data-collector"
-      ofelia.job-run.initial-run.run-once: "true"
-```
+- Automatically installs all required dependencies
+- Supports scheduled execution using Ofelia scheduler
+- Provides options for data persistence between runs
+- Includes proper timezone handling for scheduled jobs
 
-#### Starting the Services
+For detailed Docker setup instructions, including:
+- Running the container from Docker Hub
+- Setting up scheduled execution with Ofelia
+- Customizing the execution schedule
+- Troubleshooting common issues
 
-Run the following command to start both the data collector and scheduler containers:
+See the [Docker README](docker-readme.md) for complete documentation.
+
+Basic Docker usage:
 
 ```bash
-docker-compose up -d
+# Pull the image
+docker pull kdidtech/anilist-data-collector:latest
+
+# Run with Kaggle credentials
+docker run --rm \
+    -v ~/.kaggle/kaggle.json:/root/.kaggle/kaggle.json:ro \
+    kdidtech/anilist-data-collector:latest
 ```
 
-This will:
-- Start the Ofelia scheduler container
-- Configure it to run the anime data collector every Sunday at 2:00 AM CST
-- Optionally run the data collector once immediately after startup
+## License
 
-### 3. Understanding Ofelia Configuration
+This project is licensed under the MIT License - see the LICENSE file for details.
 
-#### Job Types
+## Acknowledgements
 
-Ofelia supports different job types. In our configuration, we use:
-
-1. **job-exec**: Executes a command inside an existing container
-   ```
-   ofelia.job-exec.anime-job.schedule: "0 2 * * 0"
-   ofelia.job-exec.anime-job.command: "/opt/venv/bin/python /app/main.py"
-   ofelia.job-exec.anime-job.container: "anilist-data-collector"
-   ```
-
-2. **job-run**: Runs a container (starts and stops it)
-   ```
-   ofelia.job-run.initial-run.schedule: "@every 10s"
-   ofelia.job-run.initial-run.command: "anilist-data-collector"
-   ofelia.job-run.initial-run.run-once: "true"
-   ```
-
-#### Schedule Syntax
-
-Ofelia uses standard cron syntax for scheduling:
-
-- `0 2 * * 0` - Every Sunday at 2:00 AM
-- `0 4 * * 1` - Every Monday at 4:00 AM
-- `0 0 1 * *` - First day of every month at midnight
-- `0 12 * * 1-5` - Every weekday at noon
-
-Ofelia also supports interval notation:
-- `@every 1h30m` - Every 1 hour and 30 minutes
-- `@every 1h` - Every hour
-- `@daily` - Once a day
-
-### 4. Customizing the Configuration
-
-#### Changing the Schedule
-
-To change when the job runs, modify the `ofelia.job-exec.anime-job.schedule` label in the docker-compose.yml file.
-
-#### Controlling Initial Execution
-
-The configuration includes an optional initial run that executes once when the services start. To disable this, remove or comment out these three lines:
-
-```yaml
-# Optional: Run the job immediately when the scheduler starts
-ofelia.job-run.initial-run.schedule: "@every 10s"
-ofelia.job-run.initial-run.command: "anilist-data-collector"
-ofelia.job-run.initial-run.run-once: "true"
-```
-
-#### Passing Command-Line Arguments
-
-To pass command-line arguments to the script, modify the command in the job-exec label:
-
-```yaml
-# Run in test mode
-ofelia.job-exec.anime-job.command: "/opt/venv/bin/python /app/main.py --test"
-
-# Skip data fetching
-ofelia.job-exec.anime-job.command: "/opt/venv/bin/python /app/main.py --skip-fetch"
-
-# Skip Kaggle upload
-ofelia.job-exec.anime-job.command: "/opt/venv/bin/python /app/main.py --skip-upload"
-```
-
-### 5. Monitoring and Logs
-
-#### Viewing Ofelia Logs
-
-To see the scheduler logs and job execution status:
-
-```bash
-docker logs anime-scheduler
-```
-
-#### Viewing Data Collector Logs
-
-To see the logs from the data collector when it runs:
-
-```bash
-docker logs anilist-data-collector
-```
-
-#### Checking Job Status
-
-Ofelia provides a simple HTTP API to check job status. By default, it listens on port 8080:
-
-```bash
-# Add this to the scheduler service in docker-compose.yml
-ports:
-  - "8080:8080"
-```
-
-Then access http://localhost:8080/jobs to see the status of all jobs.
-
-## Troubleshooting
-
-### Ofelia Not Running Jobs
-
-If Ofelia is not running the scheduled jobs:
-
-1. Check if Ofelia has access to the Docker socket:
-   ```bash
-   docker exec -it anime-scheduler ls -la /var/run/docker.sock
-   ```
-
-2. Verify the container names match exactly:
-   ```bash
-   docker ps
-   ```
-
-3. Check Ofelia logs for errors:
-   ```bash
-   docker logs anime-scheduler
-   ```
-
-### Data Collector Failing
-
-If the data collector job fails:
-
-1. Run the container manually to see the error:
-   ```bash
-   docker run --rm \
-       -v ~/.kaggle/kaggle.json:/root/.kaggle/kaggle.json:ro \
-       kdidtech/anilist-data-collector:latest
-   ```
-
-2. Check if the Kaggle credentials are mounted correctly:
-   ```bash
-   docker exec -it anilist-data-collector ls -la /root/.kaggle
-   ```
-
-3. Verify the data directory permissions:
-   ```bash
-   docker exec -it anilist-data-collector ls -la /app/data
-   ```
-
-## Advanced Configuration
-
-### Using Environment Variables
-
-You can pass environment variables to the data collector:
-
-```yaml
-anilist-data-collector:
-  image: kdidtech/anilist-data-collector:latest
-  container_name: anilist-data-collector
-  volumes:
-    - ~/.kaggle/kaggle.json:/root/.kaggle/kaggle.json:ro
-  environment:
-    - TZ=America/Chicago
-    - LOG_LEVEL=DEBUG
-```
-
-### Multiple Scheduled Jobs
-
-You can configure multiple jobs with different schedules:
-
-```yaml
-labels:
-  # Weekly full run
-  ofelia.job-exec.weekly-job.schedule: "0 2 * * 0"
-  ofelia.job-exec.weekly-job.command: "/opt/venv/bin/python /app/main.py"
-  ofelia.job-exec.weekly-job.container: "anilist-data-collector"
-  
-  # Daily test run
-  ofelia.job-exec.daily-test.schedule: "0 4 * * *"
-  ofelia.job-exec.daily-test.command: "/opt/venv/bin/python /app/main.py --test"
-  ofelia.job-exec.daily-test.container: "anilist-data-collector"
-```
-
-### Email Notifications
-
-Ofelia supports email notifications for job execution:
-
-```yaml
-scheduler:
-  image: mcuadros/ofelia:latest
-  command: daemon --docker
-  environment:
-    - OFELIA_SMTP_HOST=smtp.example.com
-    - OFELIA_SMTP_PORT=587
-    - OFELIA_SMTP_USER=user
-    - OFELIA_SMTP_PASSWORD=password
-    - OFELIA_SMTP_FROM=ofelia@example.com
-  labels:
-    ofelia.job-exec.anime-job.schedule: "0 2 * * 0"
-    ofelia.job-exec.anime-job.command: "/opt/venv/bin/python /app/main.py"
-    ofelia.job-exec.anime-job.container: "anilist-data-collector"
-    ofelia.job-exec.anime-job.email-on-error: "admin@example.com"
-```
-
-## Comparison with Other Scheduling Methods
-
-### Advantages of Ofelia over Cron in Containers
-
-1. **Designed for Docker**: Ofelia is specifically designed to work with Docker containers
-2. **No PATH issues**: Avoids the common PATH and environment variable issues with cron
-3. **Better logging**: Provides detailed logs of job execution
-4. **Job monitoring**: Includes a simple HTTP API for monitoring job status
-5. **Multiple job types**: Supports executing commands in containers or running containers
-6. **Flexible scheduling**: Supports both cron syntax and interval notation
-
-### Advantages of Ofelia over Host Cron
-
-1. **Self-contained**: Everything runs within Docker, no need to set up host cron
-2. **Portable**: Works the same across different operating systems
-3. **Better integration**: Direct access to Docker containers without shell scripts
-4. **Centralized management**: All scheduling configuration is in the docker-compose.yml file
-5. **Built-in monitoring**: Includes job status monitoring capabilities
+- [AniList](https://anilist.co) for providing the GraphQL API
+- [Kaggle](https://kaggle.com) for hosting the dataset
