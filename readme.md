@@ -91,6 +91,70 @@ Before running the script, you need to set up your Kaggle API credentials:
    - `~/.kaggle/kaggle.json` (Linux/Mac)
    - `C:\Users\<Windows-username>\.kaggle\kaggle.json` (Windows)
 
+## Customizing Kaggle Dataset Metadata
+
+By default, the project is configured to upload to a specific Kaggle dataset. If you want to create your own Kaggle dataset instead, you'll need to modify the metadata file:
+
+1. Open `data/kaggle/kaggle_dataset_metadata.json`
+2. Update the following fields:
+   - `"id"`: Change from `"calebmwelsh/anilist-anime-dataset"` to `"YOUR_USERNAME/YOUR_DATASET_NAME"`
+   - `"title"`: Set your preferred dataset title
+   - `"subtitle"`: Set your preferred subtitle
+   - `"keywords"`: Modify keywords as needed
+   - `"licenses"`: Change the license if desired
+
+Example of a customized metadata file:
+
+```json
+{
+  "title": "My AniList Anime Collection",
+  "subtitle": "Comprehensive anime dataset from AniList API",
+  "description": "",
+  "id": "your_username/my-anilist-dataset",
+  "licenses": [
+    {
+      "name": "CC0-1.0"
+    }
+  ],
+  "keywords": [
+    "anime",
+    "entertainment",
+    "anilist",
+    "data analysis"
+  ],
+  "resources": [
+    {
+      "path": "anilist_anime_data_complete.csv",
+      "description": "Complete anime dataset in CSV format"
+    },
+    {
+      "path": "anilist_anime_data_complete.xlsx",
+      "description": "Complete anime dataset in Excel format"
+    },
+    {
+      "path": "anilist_anime_data_complete.pkl",
+      "description": "Complete anime dataset in Python pickle format"
+    },
+    {
+      "path": "kaggle_dataset_description.md",
+      "description": "Detailed description of dataset columns and structure"
+    },
+    {
+      "path": "fetch_data.py",
+      "description": "Python script to fetch and preprocess the dataset"
+    }
+  ]
+}
+```
+
+**Important Notes:**
+- The `id` field must be in the format `username/dataset-slug`
+- Your Kaggle username is case-sensitive
+- The dataset slug should be lowercase with hyphens instead of spaces
+- You must have a Kaggle account and API credentials set up
+- If the dataset doesn't exist yet, it will be created
+- If the dataset already exists, it will be updated with a new version
+
 ## Dataset Output
 
 After running the script, the following files will be created:
