@@ -549,8 +549,12 @@ def fetch_all_anime(test_mode=False):
             (2016, 2016), (2017, 2017), (2018, 2018),  # Recent anime (many entries per year)
             (2019, 2019), (2020, 2020), (2021, 2021),  # Very recent anime
             (2022, 2022), (2023, 2023), (2024, 2024),  # Current anime
-            (2025, 2025)  # Upcoming anime
+            (2025, 2025),
         ]
+        # Dynamically add any years after 2025 up to and including the current year
+        current_year = datetime.now().year
+        for y in range(2026, current_year + 1):
+            year_ranges.append((y, y))
     
     all_anime = []
     
